@@ -18,7 +18,7 @@ class MainActivity : AppCompatActivity() {
         binding.tv2.movementMethod = LinkMovementMethod.getInstance()
         Jsoup.parse(html).body().let {
             binding.tv1.text = it.toString()
-            binding.tv2.text = it.getSpanned()
+            binding.tv2.setText(it.getSpanned())
         }
         staticContext= requireNotNull(this)
     }
@@ -59,8 +59,30 @@ class MainActivity : AppCompatActivity() {
                   </tr>
             </tbody>
             </table>
-           
-            <p>SuperScript X<sup>4</sup></p>           
+           <p>
+           <ul>
+             <li>Coffee</li>
+             <li>Tea</li>
+             <li>Milk</li>
+           </ul>
+           </p>
+           <p>
+           <ol>
+             <li>Coffee</li>
+             <li>Tea</li>
+             <li>Milk</li>
+             <li>Coffee</li>
+             <li>Tea</li>
+             <li>Milk</li>
+             <li>Coffee</li>
+             <li>Tea</li>
+             <li>Milk</li>
+             <li>Coffee</li>
+             <li>Tea</li>
+             <li>Milk</li>
+           </ol>
+           </p>
+                      
             </body>
             """.trimIndent()
 

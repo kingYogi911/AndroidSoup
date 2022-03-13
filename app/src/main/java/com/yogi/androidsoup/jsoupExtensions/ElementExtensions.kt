@@ -1,29 +1,29 @@
 package com.yogi.androidsoup.jsoupExtensions
 
 import android.app.AlertDialog
-import android.content.ContextWrapper
 import android.text.Spannable
 import android.text.SpannableStringBuilder
 import android.text.Spanned
+import android.text.style.BulletSpan
 import android.text.style.ClickableSpan
 import android.text.style.ImageSpan
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
-import android.widget.Toast
-import androidx.appcompat.widget.AlertDialogLayout
 import androidx.core.content.ContextCompat
 import androidx.core.text.getSpans
-import androidx.core.text.toSpanned
 import com.yogi.androidsoup.App
 import com.yogi.androidsoup.ImageProvider
 import com.yogi.androidsoup.MainActivity
-import com.yogi.androidsoup.R
+import com.yogi.androidsoup.ViewUtils
 import com.yogi.androidsoup.databinding.DilaogLayoutBinding
+import com.yogi.androidsoup.spans.DotListSpan
+import com.yogi.androidsoup.spans.NumberedListSpan
 import com.yogi.androidsoup.spans.TableSpan
 import com.yogi.androidsoup.styles.Empty
 import com.yogi.androidsoup.styles.TextStyle
 import org.jsoup.nodes.Element
+import org.jsoup.select.Elements
 
 
 operator fun SpannableStringBuilder.plusAssign(spanned: CharSequence) {
@@ -33,7 +33,7 @@ operator fun SpannableStringBuilder.plusAssign(spanned: CharSequence) {
 fun Element.getSpanned(
     styles: MutableList<TextStyle> = mutableListOf(),
     imageProvider: ImageProvider? = null
-): Spanned {
+): Spannable {
     val newStyles = mutableListOf<TextStyle>().apply {
         addAll(styles)
     }
@@ -41,6 +41,7 @@ fun Element.getSpanned(
     when (this.tagName()) {
         "table" -> {
             builder += getSpannedFromTableTag(this, newStyles)
+            builder += "\n"
         }
         "img" -> {
             builder += getImageFromImageTag(this, imageProvider)
@@ -49,20 +50,42 @@ fun Element.getSpanned(
             builder += iterativeSpans(newStyles, imageProvider)
             builder += "\n"
         }
-        "ol"->{
-//            builder += getSpannedNumberedList()
+        "ol" -> {
+            builder += handleNumberedList(this.getElementsByTag("li"))
         }
-        "ul"->{
-
+        "ul" -> {
+            builder += handleUnorderedList(this.getElementsByTag("li"))
         }
         else -> {
-            Log.e("Un-Specific-Tag","name : ${tagName()}")
+            Log.e("Un-Specific-Tag", "name : ${tagName()}")
             TextStyle.fromTag(this.tagName())?.let { newStyles.add(it) }
             if (this.hasAttr("style")) {
                 TextStyle.fromCss(this.attr("style")).let { newStyles.addAll(it) }
             }
             builder += iterativeSpans(newStyles, imageProvider)
         }
+    }
+    return builder
+}
+
+fun handleUnorderedList(liTags: Elements): Spannable {
+    val builder = SpannableStringBuilder("")
+    liTags.forEach { element ->
+        builder += element.getSpanned().apply {
+            setSpan(DotListSpan(), 0, length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+        }
+        builder += "\n"
+    }
+    return builder
+}
+
+fun handleNumberedList(liTags: Elements): Spannable {
+    val builder = SpannableStringBuilder("")
+    liTags.forEachIndexed { index, element ->
+        builder += element.getSpanned().apply {
+            setSpan(NumberedListSpan(index + 1), 0, length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+        }
+        builder += "\n"
     }
     return builder
 }
@@ -87,7 +110,7 @@ private fun Element.iterativeSpans(
     builder += getSpanned("<${tagName()}>", listOf(Empty()))
     for (node in this.childNodes()) {
         builder += if (node is Element) {
-            Log.e("iterativeSpans","node"+node.nodeName())
+            Log.e("iterativeSpans", "node" + node.nodeName())
             node.getSpanned(styles, imageProvider)
         } else {
             getSpanned(node.toString(), styles)
@@ -146,20 +169,20 @@ private fun getSpannedFromTableTag(
     element: Element,
     inheritedStyles: List<TextStyle> = listOf()
 ): Spanned {
-    Log.e("getSpannedFromTableTag",element.toString().toString())
-    val spanned=SpannableStringBuilder("table")
-    spanned.getSpans<Any>(0,spanned.length).forEach {
+    Log.e("getSpannedFromTableTag", element.toString().toString())
+    val spanned = SpannableStringBuilder("table")
+    spanned.getSpans<Any>(0, spanned.length).forEach {
         spanned.removeSpan(it)
     }
-    val tableSpan=TableSpan(element, inheritedStyles)
-        spanned.setSpan(
-            tableSpan,
-            0,
-            spanned.length,
-            Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
-        )
+    val tableSpan = TableSpan(element, inheritedStyles)
     spanned.setSpan(
-        object :ClickableSpan(){
+        tableSpan,
+        0,
+        spanned.length,
+        Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
+    )
+    spanned.setSpan(
+        object : ClickableSpan() {
             override fun onClick(p0: View) {
                 DilaogLayoutBinding.inflate(LayoutInflater.from(MainActivity.staticContext)).let {
                     it.imageView.setImageDrawable(tableSpan.drawable)

@@ -1,4 +1,4 @@
-package com.example.purehtml.utils
+package com.yogi.androidsoup
 
 import android.content.res.Resources
 import android.graphics.Bitmap
