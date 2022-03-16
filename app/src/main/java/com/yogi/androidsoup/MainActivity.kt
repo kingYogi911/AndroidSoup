@@ -1,30 +1,70 @@
 package com.yogi.androidsoup
 
+import android.R
 import android.content.Context
 import android.os.Bundle
 import android.text.method.LinkMovementMethod
+import android.view.ActionMode
+import android.view.Menu
+import android.view.MenuItem
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.widget.addTextChangedListener
 import com.yogi.androidsoup.databinding.ActivityMainBinding
 import com.yogi.androidsoup.jsoupExtensions.getSpanned
 import org.jsoup.Jsoup
 
+
 class MainActivity : AppCompatActivity() {
     lateinit var binding: ActivityMainBinding
+    var text = ""
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater).also {
             setContentView(it.root)
         }
         binding.tv2.movementMethod = LinkMovementMethod.getInstance()
-        Jsoup.parse(html).body().let {
-            binding.tv1.text = it.toString()
-            binding.tv2.setText(it.getSpanned())
+        Jsoup.parse(html).body().let { body->
+            binding.tv2.setText(body.getSpanned().also {
+                text = "$it"
+                binding.tv1.text = "$it"
+            })
         }
-        staticContext= requireNotNull(this)
+        binding.tv2.addTextChangedListener {
+            if (text != it.toString()) {
+                text = it.toString()
+                binding.tv1.text = text
+            }
+        }
+        binding.tv2.customSelectionActionModeCallback = object : ActionMode.Callback {
+            override fun onPrepareActionMode(mode: ActionMode?, menu: Menu?): Boolean = false
+
+            override fun onDestroyActionMode(mode: ActionMode?) {}
+
+            override fun onCreateActionMode(mode: ActionMode?, menu: Menu?): Boolean = true
+
+            override fun onActionItemClicked(mode: ActionMode, item: MenuItem): Boolean {
+                // TODO Auto-generated method stub
+                when (item.itemId) {
+                    R.id.copy -> {
+                        return false
+                    }
+                    R.id.cut -> {
+                        return true
+                    }
+                    R.id.paste -> {
+                        binding.tv2.setText(Jsoup.parse(binding.tv2.text.toString()).body().getSpanned())
+                        return false
+                    }
+                    else -> {}
+                }
+                return false
+            }
+        }
+        staticContext = requireNotNull(this)
     }
 
     companion object {
-        lateinit var staticContext:Context
+        lateinit var staticContext: Context
         val html = """
             <body contenteditable="true" class="cke_editable cke_editable_themed cke_contents_ltr" spellcheck="false"><p>Check all type of formatting staring with</p><p><span style="font-weight:bold;"><img alt="\sum \prod" src="https://latex.codecogs.com/gif.latex?%5Csum%20%5Cprod">Bold</span></p><p><em>Italic</em>&nbsp;</p><p><span style="text-decoration:underline #2cb115;" class="Underline answer">Underline</span>&nbsp;</p><p><s>StrikeThrough</s></p><p>Subscript X<sub>2</sub></p><p>SuperScript X<sup>2</sup></p><ol><li>Numbered List</li></ol><ul><li>Dot List</li></ul>
             

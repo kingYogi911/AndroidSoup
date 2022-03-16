@@ -1,7 +1,9 @@
 package com.yogi.androidsoup.jsoupExtensions
 
 import android.app.AlertDialog
+import android.graphics.drawable.Drawable
 import android.text.Spannable
+import android.text.SpannableString
 import android.text.SpannableStringBuilder
 import android.text.Spanned
 import android.text.style.BulletSpan
@@ -18,6 +20,7 @@ import com.yogi.androidsoup.MainActivity
 import com.yogi.androidsoup.ViewUtils
 import com.yogi.androidsoup.databinding.DilaogLayoutBinding
 import com.yogi.androidsoup.spans.DotListSpan
+import com.yogi.androidsoup.spans.EmptySpan
 import com.yogi.androidsoup.spans.NumberedListSpan
 import com.yogi.androidsoup.spans.TableSpan
 import com.yogi.androidsoup.styles.Empty
@@ -25,6 +28,7 @@ import com.yogi.androidsoup.styles.TextStyle
 import org.jsoup.nodes.Element
 import org.jsoup.select.Elements
 
+const val TAG = "ElementExtensions"
 
 operator fun SpannableStringBuilder.plusAssign(spanned: CharSequence) {
     append(spanned)
@@ -40,6 +44,7 @@ fun Element.getSpanned(
     val builder = SpannableStringBuilder("")
     when (this.tagName()) {
         "table" -> {
+            builder += "\n"
             builder += getSpannedFromTableTag(this, newStyles)
             builder += "\n"
         }
@@ -80,12 +85,19 @@ fun handleUnorderedList(liTags: Elements): Spannable {
 }
 
 fun handleNumberedList(liTags: Elements): Spannable {
-    val builder = SpannableStringBuilder("")
+    val startTag="<ol>\n"
+    val builder = SpannableStringBuilder(startTag).apply {
+        setSpan(EmptySpan(),0,startTag.length,Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+    }
     liTags.forEachIndexed { index, element ->
         builder += element.getSpanned().apply {
             setSpan(NumberedListSpan(index + 1), 0, length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
         }
         builder += "\n"
+    }
+    val endTag="</ol>"
+    builder += SpannableString(endTag).apply {
+        setSpan(EmptySpan(),0,endTag.length,Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
     }
     return builder
 }
@@ -170,7 +182,7 @@ private fun getSpannedFromTableTag(
     inheritedStyles: List<TextStyle> = listOf()
 ): Spanned {
     Log.e("getSpannedFromTableTag", element.toString().toString())
-    val spanned = SpannableStringBuilder("table")
+    val spanned = SpannableStringBuilder("$element".replace("[\n]+".toRegex(),""))
     spanned.getSpans<Any>(0, spanned.length).forEach {
         spanned.removeSpan(it)
     }
