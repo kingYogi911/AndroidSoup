@@ -1,17 +1,10 @@
 package com.yogi.androidsoup
 
-import android.R
-import android.content.Context
 import android.os.Bundle
 import android.text.method.LinkMovementMethod
-import android.view.ActionMode
-import android.view.Menu
-import android.view.MenuItem
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.widget.addTextChangedListener
 import com.yogi.androidsoup.databinding.ActivityMainBinding
-import com.yogi.androidsoup.jsoupExtensions.getSpanned
-import org.jsoup.Jsoup
 
 
 class MainActivity : AppCompatActivity() {
@@ -23,11 +16,10 @@ class MainActivity : AppCompatActivity() {
             setContentView(it.root)
         }
         binding.tv2.movementMethod = LinkMovementMethod.getInstance()
-        Jsoup.parse(html).body().let { body->
-            binding.tv2.setText(body.getSpanned().also {
-                text = "$it"
-                binding.tv1.text = "$it"
-            })
+        AndroidSoup.parse(html).let {
+            binding.tv2.setText(it)
+            text = "$it"
+            binding.tv1.text = "$it"
         }
         binding.tv2.addTextChangedListener {
             if (text != it.toString()) {
@@ -35,36 +27,9 @@ class MainActivity : AppCompatActivity() {
                 binding.tv1.text = text
             }
         }
-        binding.tv2.customSelectionActionModeCallback = object : ActionMode.Callback {
-            override fun onPrepareActionMode(mode: ActionMode?, menu: Menu?): Boolean = false
-
-            override fun onDestroyActionMode(mode: ActionMode?) {}
-
-            override fun onCreateActionMode(mode: ActionMode?, menu: Menu?): Boolean = true
-
-            override fun onActionItemClicked(mode: ActionMode, item: MenuItem): Boolean {
-                // TODO Auto-generated method stub
-                when (item.itemId) {
-                    R.id.copy -> {
-                        return false
-                    }
-                    R.id.cut -> {
-                        return true
-                    }
-                    R.id.paste -> {
-                        binding.tv2.setText(Jsoup.parse(binding.tv2.text.toString()).body().getSpanned())
-                        return false
-                    }
-                    else -> {}
-                }
-                return false
-            }
-        }
-        staticContext = requireNotNull(this)
     }
 
     companion object {
-        lateinit var staticContext: Context
         val html = """
             <body contenteditable="true" class="cke_editable cke_editable_themed cke_contents_ltr" spellcheck="false"><p>Check all type of formatting staring with</p><p><span style="font-weight:bold;"><img alt="\sum \prod" src="https://latex.codecogs.com/gif.latex?%5Csum%20%5Cprod">Bold</span></p><p><em>Italic</em>&nbsp;</p><p><span style="text-decoration:underline #2cb115;" class="Underline answer">Underline</span>&nbsp;</p><p><s>StrikeThrough</s></p><p>Subscript X<sub>2</sub></p><p>SuperScript X<sup>2</sup></p><ol><li>Numbered List</li></ol><ul><li>Dot List</li></ul>
             
@@ -81,16 +46,13 @@ class MainActivity : AppCompatActivity() {
                   
                   <tr><td>
                          <span style="font-weight:bold">table (2,1)</span>
-                         <br>
                       </td>
                       <td>
                          <span style="font-weight:bold">table (2,2)</span>
-                         <br>
                       </td>
                   </tr>
                   <tr><td>
-                          <span style="font-weight:bold">table (3,1)</span>
-                          <br> 
+                          <span style="font-weight:bold">table (3,1)</span> 
                        </td>
                        <td>
                            <span style="font-weight:bold">table (3,2)</span>
@@ -108,7 +70,7 @@ class MainActivity : AppCompatActivity() {
            </p>
            <p>
            <ol>
-             <li>Coffee</li>
+             <li>Coffee lets check if for a whole line or may be for two why the hell i am not able to get it tp two lines</li>
              <li>Tea</li>
              <li>Milk</li>
              <li>Coffee</li>
@@ -122,11 +84,38 @@ class MainActivity : AppCompatActivity() {
              <li>Milk</li>
            </ol>
            </p>
-                      
+           <a href="https://www.w3schools.com">Visit W3Schools.com!</a>
+              
+              <table>
+                  <caption>Alien football stars</caption>
+                  <tr>
+                      <th scope="col">Player</th>
+                      <th scope="col">Gloobles</th>
+                      <th scope="col">Za'taak</th>
+                  </tr>
+                  <tr>
+                      <th scope="row">TR-7</th>
+                      <td>7</td>
+                      <td>4,569</td>
+                  </tr>
+                  <tr>
+                      <th scope="row">Khiresh Odo Yogesh Sahani</th>
+                      <td>7</td>
+                      <td>7,223</td>
+                  </tr>
+                  <tr>
+                      <th scope="row">Mia Oolong</th>
+                      <td>9</td>
+                      <td>6,219</td>
+                  </tr>
+                  <tr>
+                      <th scope="row">Mia Oolong</th>
+                      <td>9</td>
+                      <td>6,219</td>
+                  </tr>
+              </table>
+
             </body>
             """.trimIndent()
-
-
     }
-
 }

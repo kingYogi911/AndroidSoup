@@ -23,11 +23,11 @@ class ViewUtils {
         }
 
         fun createBitmapFromViewWithoutDisplay(@NotNull view:View):Bitmap{
-            val width = 500
-            val height = 200
+            val width = 800
+            val height = App.context.resources.displayMetrics.heightPixels
 
-            val measuredWidth = View.MeasureSpec.makeMeasureSpec(width, View.MeasureSpec.EXACTLY)
-            val measuredHeight = View.MeasureSpec.makeMeasureSpec(height, View.MeasureSpec.EXACTLY)
+            val measuredWidth = View.MeasureSpec.makeMeasureSpec(width, View.MeasureSpec.AT_MOST)
+            val measuredHeight = View.MeasureSpec.makeMeasureSpec(height, View.MeasureSpec.AT_MOST)
 
             //Cause the view to re-layout
             view.measure(measuredWidth, measuredHeight)

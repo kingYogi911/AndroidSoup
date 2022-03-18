@@ -6,7 +6,8 @@
         <entry key="../../../../layout/custom_preview.xml" value="0.14537037037037037" />
         <entry key="app/src/main/res/layout/activity_main.xml" value="0.16574074074074074" />
         <entry key="app/src/main/res/layout/dilaog_layout.xml" value="0.1513671875" />
-        <entry key="app/src/main/res/layout/table_layout.xml" value="0.10092592592592593" />
+        <entry key="app/src/main/res/layout/table_cell_layout.xml" value="0.14351851851851852" />
+        <entry key="app/src/main/res/layout/table_layout.xml" value="0.22" />
       </map>
     </option>
   </component>
