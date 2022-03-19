@@ -8,11 +8,9 @@ import android.text.style.*
 import android.util.Log
 import android.view.View
 import androidx.core.content.ContextCompat
-import com.yogi.androidsoup.AndroidSoup.Companion.getSpanned
 import com.yogi.androidsoup.data.HEADING_SIZES
-import com.yogi.androidsoup.spans.DotListSpan
 import com.yogi.androidsoup.spans.EmptySpan
-import com.yogi.androidsoup.spans.NumberedListSpan
+import com.yogi.androidsoup.spans.ListItemSpan
 import com.yogi.androidsoup.spans.TableSpan
 import com.yogi.androidsoup.styles.Empty
 import com.yogi.androidsoup.styles.TextStyle
@@ -40,40 +38,50 @@ class AndroidSoup {
             }
             val builder = SpannableStringBuilder("")
             when {
-                tagName()=="table" -> {
+                tagName() == "table" -> {
                     builder += "\n"
                     builder += getSpannedFromTableTag(this, newStyles)
                     builder += "\n"
                 }
-                tagName()=="img" -> {
+                tagName() == "img" -> {
                     builder += getImageFromImageTag(this, imageProvider)
                 }
-                tagName()=="br"->{
+                tagName() == "br" -> {
                     builder += "\n"
                 }
-                tagName()=="p"->{
+                tagName() == "p" -> {
                     builder += iterativeSpans(newStyles, imageProvider)
                     builder += "\n"
                 }
-                tagName()=="ol" -> {
+                tagName() == "ol" -> {
                     builder += handleNumberedList(this)
                 }
-                tagName()=="ul" -> {
+                tagName() == "ul" -> {
                     builder += handleUnorderedList(this.getElementsByTag("li"))
                 }
-                tagName()=="a"->{
+                tagName() == "a" -> {
                     builder += SpannableStringBuilder(this.html()).apply {
-                        setSpan(URLSpan(this@getSpanned.attr("href")),0,length,Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+                        setSpan(
+                            URLSpan(this@getSpanned.attr("href")),
+                            0,
+                            length,
+                            Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
+                        )
                     }
                 }
-                tagName()=="blockquote"->{
+                tagName() == "blockquote" -> {
                     builder += SpannableStringBuilder(this.html()).apply {
-                        setSpan(QuoteSpan(),0,length,Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+                        setSpan(QuoteSpan(), 0, length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
                     }
                 }
-                "h[1-6]".toRegex().matches(tagName())->{
+                "h[1-6]".toRegex().matches(tagName()) -> {
                     builder += SpannableStringBuilder(this.html()).apply {
-                        setSpan(RelativeSizeSpan(HEADING_SIZES[tagName()]!!),0,length,Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+                        setSpan(
+                            RelativeSizeSpan(HEADING_SIZES[tagName()]!!),
+                            0,
+                            length,
+                            Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
+                        )
                     }
                 }
                 else -> {
@@ -121,15 +129,7 @@ class AndroidSoup {
 
         private fun handleTag(tag: String): Spanned? {
 
-            if (tag == "br") {
-
-            } else if (tag == "p") {
-
-            } else if (tag == "ul") {
-
-            } else if (tag == "li") {
-
-            } else if (tag == "div") {
+            if (tag == "div") {
 
             } else if (tag == "span") {
 
@@ -142,26 +142,30 @@ class AndroidSoup {
         }
 
         private fun handleUnorderedList(liTags: Elements): Spannable {
-            val builder = SpannableStringBuilder("")
+            val builder = SpannableStringBuilder("<ul>\n").apply {
+                setSpan(EmptySpan(), 0, length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+            }
             liTags.forEach { element ->
                 builder += element.getSpanned().apply {
-                    setSpan(DotListSpan(), 0, length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+                    setSpan(ListItemSpan(), 0, length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
                 }
                 builder += "\n"
+            }
+            builder += SpannableString( "</ul>").apply {
+                setSpan(EmptySpan(), 0, length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
             }
             return builder
         }
 
         private fun handleNumberedList(olElement: Element): Spannable {
             val liTags = olElement.getElementsByTag("li")
-            val startTag = "<ol>\n"
-            val builder = SpannableStringBuilder(startTag).apply {
-                setSpan(EmptySpan(), 0, startTag.length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+            val builder = SpannableStringBuilder("<ol>\n").apply {
+                setSpan(EmptySpan(), 0, length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
             }
             liTags.forEachIndexed { index, element ->
                 builder += element.getSpanned().apply {
                     setSpan(
-                        NumberedListSpan(index + 1),
+                        ListItemSpan(index + 1),
                         0,
                         length,
                         Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
@@ -169,9 +173,8 @@ class AndroidSoup {
                 }
                 builder += "\n"
             }
-            val endTag = "</ol>"
-            builder += SpannableString(endTag).apply {
-                setSpan(EmptySpan(), 0, endTag.length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+            builder += SpannableString("</ol>").apply {
+                setSpan(EmptySpan(), 0, length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
             }
             return builder
         }

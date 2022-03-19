@@ -21,12 +21,6 @@ class MainActivity : AppCompatActivity() {
             text = "$it"
             binding.tv1.text = "$it"
         }
-        binding.tv2.addTextChangedListener {
-            if (text != it.toString()) {
-                text = it.toString()
-                binding.tv1.text = text
-            }
-        }
     }
 
     companion object {
