@@ -7,6 +7,7 @@ import android.text.Spanned
 import android.text.style.*
 import android.util.Log
 import android.view.View
+import android.widget.TextView
 import androidx.core.content.ContextCompat
 import com.yogi.androidsoup.data.HEADING_SIZES
 import com.yogi.androidsoup.spans.EmptySpan
@@ -17,12 +18,52 @@ import com.yogi.androidsoup.styles.TextStyle
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Element
 import org.jsoup.select.Elements
+import java.util.concurrent.atomic.AtomicInteger
 
 class AndroidSoup {
     companion object {
-        fun parse(html: String): Spannable {
+        fun parse(html: String): SpannableStringBuilder {
             val formatted = html.replace("&nbsp;".toRegex(), " ")
-            return Jsoup.parse(formatted).body().getSpanned()
+            return Jsoup.parse(formatted).body()
+                .getSpanned(
+                    imageProvider = null,
+                    replaceDelayed = { a, b -> run {} },
+                    delayedCount = AtomicInteger()
+                ) as SpannableStringBuilder
+        }
+
+        fun parse(
+            html: String,
+            imageProvider: ImageProvider,
+            textView: TextView?,
+            onComplete: ((SpannableStringBuilder) -> Unit)? = null
+        ) {
+            val formatted = html.replace("&nbsp;".toRegex(), " ")
+            var result: SpannableStringBuilder? = null
+            val delayedCount = AtomicInteger(0)
+            fun delayedReplacement(obj: Any, replacement: Any) {
+                Log.e("AndroidSoup", "delayed replacement execution")
+                result?.let {
+                    val s = it.getSpanStart(obj)
+                    val e = it.getSpanEnd(obj)
+                    it.removeSpan(obj)
+                    it.setSpan(replacement, s, e, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+                    textView?.text = result
+                    if (delayedCount.decrementAndGet() == 0) {
+                        onComplete?.invoke(result!!)
+                    }
+                }
+            }
+            result = Jsoup.parse(formatted).body()
+                .getSpanned(
+                    imageProvider = imageProvider,
+                    replaceDelayed = { a, b -> delayedReplacement(a, b) },
+                    delayedCount = delayedCount
+                ) as SpannableStringBuilder
+            textView?.text = result
+            if (delayedCount.get() == 0) {
+                onComplete?.invoke(result)
+            }
         }
 
         private operator fun SpannableStringBuilder.plusAssign(spanned: CharSequence) {
@@ -31,7 +72,9 @@ class AndroidSoup {
 
         fun Element.getSpanned(
             styles: MutableList<TextStyle> = mutableListOf(),
-            imageProvider: ImageProvider? = null
+            imageProvider: ImageProvider? = null,
+            replaceDelayed: ((Any, Any) -> Unit),
+            delayedCount: AtomicInteger
         ): Spannable {
             val newStyles = mutableListOf<TextStyle>().apply {
                 addAll(styles)
@@ -44,20 +87,34 @@ class AndroidSoup {
                     builder += "\n"
                 }
                 tagName() == "img" -> {
-                    builder += getImageFromImageTag(this, imageProvider)
+                    builder += getImageFromImageTag(
+                        this,
+                        imageProvider,
+                        replaceDelayed,
+                        delayedCount
+                    )
                 }
                 tagName() == "br" -> {
                     builder += "\n"
                 }
                 tagName() == "p" -> {
-                    builder += iterativeSpans(newStyles, imageProvider)
+                    builder += iterativeSpans(
+                        newStyles,
+                        imageProvider,
+                        replaceDelayed,
+                        delayedCount
+                    )
                     builder += "\n"
                 }
                 tagName() == "ol" -> {
-                    builder += handleNumberedList(this)
+                    builder += handleNumberedList(this, replaceDelayed, delayedCount)
                 }
                 tagName() == "ul" -> {
-                    builder += handleUnorderedList(this.getElementsByTag("li"))
+                    builder += handleUnorderedList(
+                        this.getElementsByTag("li"),
+                        replaceDelayed,
+                        delayedCount
+                    )
                 }
                 tagName() == "a" -> {
                     builder += SpannableStringBuilder(this.html()).apply {
@@ -90,7 +147,12 @@ class AndroidSoup {
                     if (this.hasAttr("style")) {
                         TextStyle.fromCss(this.attr("style")).let { newStyles.addAll(it) }
                     }
-                    builder += iterativeSpans(newStyles, imageProvider)
+                    builder += iterativeSpans(
+                        newStyles,
+                        imageProvider,
+                        replaceDelayed!!,
+                        delayedCount
+                    )
                 }
             }
             return builder
@@ -111,14 +173,16 @@ class AndroidSoup {
 
         private fun Element.iterativeSpans(
             styles: MutableList<TextStyle> = mutableListOf(),
-            imageProvider: ImageProvider? = null
+            imageProvider: ImageProvider? = null,
+            replaceDelayed: ((Any, Any) -> Unit),
+            delayedCount: AtomicInteger
         ): CharSequence {
             val builder = SpannableStringBuilder("")
             builder += getSpanned("<${tagName()}>", listOf(Empty()))
             for (node in this.childNodes()) {
                 builder += if (node is Element) {
                     Log.e("iterativeSpans", "node" + node.nodeName())
-                    node.getSpanned(styles, imageProvider)
+                    node.getSpanned(styles, imageProvider, replaceDelayed, delayedCount)
                 } else {
                     getSpanned(node.toString(), styles)
                 }
@@ -141,29 +205,43 @@ class AndroidSoup {
             return null
         }
 
-        private fun handleUnorderedList(liTags: Elements): Spannable {
+        private fun handleUnorderedList(
+            liTags: Elements,
+            replaceDelayed: (Any, Any) -> Unit,
+            delayedCount: AtomicInteger
+        ): Spannable {
             val builder = SpannableStringBuilder("<ul>\n").apply {
                 setSpan(EmptySpan(), 0, length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
             }
             liTags.forEach { element ->
-                builder += element.getSpanned().apply {
+                builder += element.getSpanned(
+                    replaceDelayed = replaceDelayed,
+                    delayedCount = delayedCount
+                ).apply {
                     setSpan(ListItemSpan(), 0, length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
                 }
                 builder += "\n"
             }
-            builder += SpannableString( "</ul>").apply {
+            builder += SpannableString("</ul>").apply {
                 setSpan(EmptySpan(), 0, length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
             }
             return builder
         }
 
-        private fun handleNumberedList(olElement: Element): Spannable {
+        private fun handleNumberedList(
+            olElement: Element,
+            replaceDelayed: (Any, Any) -> Unit,
+            delayedCount: AtomicInteger
+        ): Spannable {
             val liTags = olElement.getElementsByTag("li")
             val builder = SpannableStringBuilder("<ol>\n").apply {
                 setSpan(EmptySpan(), 0, length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
             }
             liTags.forEachIndexed { index, element ->
-                builder += element.getSpanned().apply {
+                builder += element.getSpanned(
+                    replaceDelayed = replaceDelayed,
+                    delayedCount = delayedCount
+                ).apply {
                     setSpan(
                         ListItemSpan(index + 1),
                         0,
@@ -179,20 +257,45 @@ class AndroidSoup {
             return builder
         }
 
-        private fun getImageFromImageTag(element: Element, imageProvider: ImageProvider?): Spanned {
+        private fun getImageFromImageTag(
+            element: Element,
+            imageProvider: ImageProvider?,
+            replaceDelayed: ((Any, Any) -> Unit),
+            delayedCount: AtomicInteger
+        ): Spanned {
             val builder = SpannableStringBuilder(element.toString())
-            val image = imageProvider?.getImage(element.attr("src"))
-                ?: ContextCompat.getDrawable(App.context, android.R.drawable.ic_delete)!!.apply {
-                    val width: Int = intrinsicWidth
-                    val height: Int = intrinsicHeight
-                    setBounds(0, 0, if (width > 0) width else 0, if (height > 0) height else 0)
+            val imageSpan: ImageSpan
+            ContextCompat.getDrawable(App.context, android.R.drawable.gallery_thumb)!!.apply {
+                val width: Int = intrinsicWidth
+                val height: Int = intrinsicHeight
+                setBounds(0, 0, if (width > 0) width else 0, if (height > 0) height else 0)
+            }.let {
+                imageSpan = ImageSpan(it)
+                builder.setSpan(
+                    imageSpan,
+                    0,
+                    builder.length,
+                    Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
+                )
+                if (imageProvider != null) {
+                    delayedCount.getAndIncrement()
+                    imageProvider.requestImage(element.attr("src")) { drawable ->
+                        if (drawable != null) {
+                            val width: Int = drawable.intrinsicWidth
+                            val height: Int = drawable.intrinsicHeight
+                            drawable.setBounds(
+                                0,
+                                0,
+                                if (width > 0) width else 0,
+                                if (height > 0) height else 0
+                            )
+                            replaceDelayed.invoke(imageSpan,ImageSpan(drawable))
+                        }else{
+                            replaceDelayed.invoke(imageSpan, imageSpan)// agr image null ho to us case me callback ke liye
+                        }
+                    }
                 }
-            builder.setSpan(
-                ImageSpan(image),
-                0,
-                builder.length,
-                Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
-            )
+            }
             return builder
         }
 

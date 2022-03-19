@@ -26,6 +26,7 @@ import com.yogi.androidsoup.databinding.TableLayoutBinding
 import com.yogi.androidsoup.styles.Bold
 import com.yogi.androidsoup.styles.TextStyle
 import org.jsoup.nodes.Element
+import java.util.concurrent.atomic.AtomicInteger
 
 
 class TableSpan(tableElement: Element, inheritedStyles: List<TextStyle>) :
@@ -58,7 +59,9 @@ class TableSpan(tableElement: Element, inheritedStyles: List<TextStyle>) :
                                 col.getSpanned(
                                     styles = mutableListOf<TextStyle>().apply {
                                         addAll(inheritedStyles)
-                                    }
+                                    },
+                                    replaceDelayed = {a,b-> run {} },
+                                    delayedCount = AtomicInteger(0)
                                 ).apply {
                                     if (col.tagName() == "th") {
                                         setSpan(

@@ -3,5 +3,5 @@ package com.yogi.androidsoup
 import android.graphics.drawable.Drawable
 
 interface ImageProvider {
-    fun getImage(src:String): Drawable?
+    fun requestImage(src: String, result: (Drawable?) -> Unit)
 }

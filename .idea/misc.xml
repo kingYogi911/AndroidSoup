@@ -4,6 +4,7 @@
     <option name="filePathToZoomLevelMap">
       <map>
         <entry key="../../../../layout/custom_preview.xml" value="0.14537037037037037" />
+        <entry key="../../Android/Sdk/platforms/android-32/data/res/drawable/gallery_thumb.xml" value="0.1" />
         <entry key="app/src/main/res/layout/activity_main.xml" value="0.16574074074074074" />
         <entry key="app/src/main/res/layout/dilaog_layout.xml" value="0.1513671875" />
         <entry key="app/src/main/res/layout/table_cell_layout.xml" value="0.14351851851851852" />

@@ -1,26 +1,35 @@
 package com.yogi.androidsoup
 
 import android.os.Bundle
+import android.text.Spannable
+import android.text.SpannableStringBuilder
 import android.text.method.LinkMovementMethod
+import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.widget.addTextChangedListener
 import com.yogi.androidsoup.databinding.ActivityMainBinding
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.cancel
 
 
-class MainActivity : AppCompatActivity() {
+class MainActivity : AppCompatActivity(), CoroutineScope by MainScope() {
     lateinit var binding: ActivityMainBinding
     var text = ""
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
         binding = ActivityMainBinding.inflate(layoutInflater).also {
             setContentView(it.root)
         }
         binding.tv2.movementMethod = LinkMovementMethod.getInstance()
-        AndroidSoup.parse(html).let {
-            binding.tv2.setText(it)
-            text = "$it"
+        AndroidSoup.parse(html, ScopedImageProvider(this), binding.tv2){
             binding.tv1.text = "$it"
         }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        cancel()
     }
 
     companion object {

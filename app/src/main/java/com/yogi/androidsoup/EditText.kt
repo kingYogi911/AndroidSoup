@@ -48,7 +48,6 @@ class EditText(context: Context, attrs: AttributeSet?, defStyleAttr: Int?) :
             editableText.append(it)
             val str=editableText.toString();
             editableText.clear()
-            editableText.append(AndroidSoup.parse((str)))
         }
         Toast.makeText(context, "Paste!", Toast.LENGTH_SHORT).show()
     }
